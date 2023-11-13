@@ -6,7 +6,6 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-
 library(broom)
 library(tidyverse)
 
@@ -33,7 +32,7 @@ scale_fill_discrete = scale_fill_viridis_d
 ## Data Loading and Processing
 ```{r}
 # Loading the homicide data from the GitHub URL
-homicide_data <- read_csv("homicide-data.csv")
+homicide_data <- read_csv("homicide-data.csv",  show_col_types = FALSE)
 
 # Creating a city_state variable and summarizing data
 homicide_summary <- homicide_data %>%
@@ -92,7 +91,60 @@ print(homicide_plot)
 ```
 
 # Q2
+## Unzip and List Files
 ```{r}
+unzip("hw5_data.zip", exdir = "hw5_data")
+files <- list.files("hw5_data/data", full.names = TRUE, pattern = ".*\\.csv$")
+```
+
+## Read and Combine Data Files
+```{r}
+data <- map_df(files, ~{
+  dat <- read_csv(.x,  show_col_types = FALSE) 
+
+  filename <- basename(.x)
+  subject_id <- str_extract(filename, "\\d+")
+  arm <- ifelse(str_detect(filename, "con_"), "control", "experimental")
+
+  dat <- dat %>%
+    mutate(subject_id = subject_id,
+           arm = arm)
+}, .id = "file_path")
 
 ```
 
+## Tidy the Data
+```{r}
+tidy_data <- data %>%
+  select(-file_path) %>% 
+  pivot_longer(
+    cols = starts_with("week_"),  
+    names_to = "time_point",
+    values_to = "observation",
+    names_prefix = "week_"  
+  ) %>%
+  
+  mutate(
+    time_point = as.integer(str_replace(time_point, "week_", ""))
+  )
+```
+
+## Create the Spaghetti Plot
+```{r}
+spaghetti_plot <- ggplot(tidy_data, aes(x = time_point, y = observation, group = subject_id, color = arm)) +
+  geom_line() +
+  labs(title = "Spaghetti Plot of Observations Over Time",
+       x = "Time Point",
+       y = "Observation",
+       color = "Group") +
+  theme_minimal()
+
+print(spaghetti_plot)
+```
+
+## Comment
+1) Variability: There is considerable variability within both groups. The lines representing individual subjects' observations over time show a range of trajectories.
+
+2) Outliers or Extreme Changes: There are instances of sharp increases or decreases in observations within both groups. For example, some subjects in the experimental group show a sharp increase in observations at later time points.
+
+3) Overlap: Early time points show a lot of overlap between the control and experimental groups, suggesting that the starting conditions for both groups are similar.
