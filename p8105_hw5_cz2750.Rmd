@@ -6,12 +6,9 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-library(readr)
-library(dplyr)
-library(purrr)
+
 library(broom)
-library(ggplot2)
-library(tidyr)
+library(tidyverse)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -92,5 +89,10 @@ homicide_plot <- ggplot(citywise_estimates, aes(x = reorder(city_state, estimate
 
 # Displaying the plot
 print(homicide_plot)
+```
+
+# Q2
+```{r}
+
 ```
 
