@@ -8,6 +8,7 @@ output: github_document
 ```{r setup, include=FALSE}
 library(broom)
 library(tidyverse)
+library(janitor)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -110,44 +111,38 @@ data <- map_df(files, ~{
     mutate(subject_id = subject_id,
            arm = arm)
 }, .id = "file_path")
-
 ```
 
 ## Tidy the Data
 ```{r}
 tidy_data <- data %>%
-  select(-file_path) %>% 
+  clean_names() %>%
+  mutate(group = ifelse(grepl("con", arm), "Control", "Experimental")) %>%
+  mutate(subject_ID = as.integer(str_extract(subject_id, "[0-9][0-9]"))) %>%
+  select(-arm, subject_id) %>%
   pivot_longer(
-    cols = starts_with("week_"),  
-    names_to = "time_point",
-    values_to = "observation",
-    names_prefix = "week_"  
+    cols = starts_with("week"),
+    names_to = "week",
+    values_to = "observation"
   ) %>%
-  
-  mutate(
-    time_point = as.integer(str_replace(time_point, "week_", ""))
-  )
+  mutate(week = as.numeric(gsub("week_", "", week)))
 ```
 
 ## Create the Spaghetti Plot
 ```{r}
-spaghetti_plot <- ggplot(tidy_data, aes(x = time_point, y = observation, group = subject_id, color = arm)) +
-  geom_line() +
-  labs(title = "Spaghetti Plot of Observations Over Time",
-       x = "Time Point",
-       y = "Observation",
-       color = "Group") +
-  theme_minimal()
-
-print(spaghetti_plot)
+tidy_data %>% 
+  ggplot(aes(x = week, y =observation, color = as.factor(subject_ID))) +
+  geom_point(size=0.2) +
+  geom_line(aes(group = subject_ID), alpha=0.5) +
+  facet_grid(~group) +
+  labs(x = "Week", y = "Observation", col = "Subject ID")
 ```
 
 ## Comment
-1) Variability: There is considerable variability within both groups. The lines representing individual subjects' observations over time show a range of trajectories.
+1) Observations in the control group fluctuated greatly over the eight-week period and did not show a clear trend, suggesting a high degree of variability and no consistent response.
 
-2) Outliers or Extreme Changes: There are instances of sharp increases or decreases in observations within both groups. For example, some subjects in the experimental group show a sharp increase in observations at later time points.
+2) The opposite is true for the experimental group, where the results show a clear upward trend, implying a systematic increase in observations over time.
 
-3) Overlap: Early time points show a lot of overlap between the control and experimental groups, suggesting that the starting conditions for both groups are similar.
 
 # Q3
 ## Set Design Elements
@@ -243,5 +238,5 @@ ggplot(power_analysis, aes(x = true_mu, y = average_estimate_rejected)) +
 
 This plot, which overlays the average estimate of μ^ only for samples where the null was rejected, shows that these average estimates are also closely aligned with the true values of μ, but there is a tendency for the estimates to be higher than the true mean, particularly at lower true values of μ. This can happen because when the null hypothesis is false, smaller sample means are less likely to lead to a rejection of the null. Hence, the means from samples that lead to a null rejection are biased upward. This bias is more pronounced at lower true values of μ, where the difference from the null is smaller and hence more susceptible to sampling variability.
 
-## answer the question, "Is the sample average of μ^ across tests for which the null is rejected approximately equal to the true value of μ?"
+## The answer OF the question, "Is the sample average of μ^ across tests for which the null is rejected approximately equal to the true value of μ?"
 The sample average of μ^ across tests where the null is rejected is not perfectly equal to the true value of μ due to the bias introduced by the selection of only significant results. This bias is a result of the sampling distribution of the test statistic under the alternative hypothesis being centered around a value that is more extreme than the true value of μ. In other words, when a test is significant, particularly with smaller effect sizes, it is often because the sample mean is somewhat larger (more extreme) than the true mean.
